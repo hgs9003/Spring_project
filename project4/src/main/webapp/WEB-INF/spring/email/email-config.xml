@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd">
+
+	<context:property-placeholder location="/WEB-INF/spring/email/email.properties"/>
+	
+	<!-- 메일기능 관련설정 -->
+	<!-- https://myaccount.google.com/security?rapt=AEjHL4OdkuzyEZ7kVBfl7IjImC8vCQOvguwootB5OVe6lT5TDHpILM5DO4vkNzw5y1RIQtWr_0s09Tz1gwq2JxhmNX6GQsCVRQ
+ 메일인증방식 변경됨. 앱비밀번호. 암호화키 사용. -->
+	
+	<bean id="mailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">
+	  <property name="host" value="smtp.gmail.com" />
+	  <property name="port" value="587" />
+	  <property name="username" value="${email.account}" />
+		<property name="password" value="${email.password}" />
+		  <property name="javaMailProperties">
+		  <props>
+		    <prop key="mail.smtp.auth">true</prop>
+		    <!-- 윈도우즈 운영체제 11버전(클라이언트)에 따라 TLS변환문제가 발생이 되는 듯 추측함. 
+		    <prop key="mail.smtp.ssl.trust">smtp.gmail.com</prop>
+			<prop key="mail.smtp.ssl.protocols">TLSv1.2</prop>
+			 -->
+		    <prop key="mail.smtp.starttls.enable">true</prop>
+		  </props>
+		</property>
+	</bean>
+</beans>

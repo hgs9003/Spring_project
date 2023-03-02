@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.demo.mapper.AdChartMapper">
+
+
+	<select id="chartCartProductList" resultType="com.demo.domain.ChartCartVO">
+	
+		SELECT 
+			P.PDT_NAME, 
+			SUM(P.PDT_PRICE * C.CART_AMOUNT) AS PRICE
+		FROM 
+			CART_TBL C 
+		INNER 
+			JOIN PRODUCT_TBL P
+		ON 
+			C.PDT_NUM = P.PDT_NUM
+		GROUP BY 
+			P.PDT_NAME
+		ORDER BY
+			P.PDT_NAME
+	
+	</select>
+
+
+</mapper>

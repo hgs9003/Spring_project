@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.demo.mapper.AdOrderMapper">
+
+	<sql id="criteria">
+	
+		<trim prefix="(" suffix=") AND " prefixOverrides="OR">
+			<foreach collection="cri.typeArr" item="type">
+			  <trim prefix="OR">
+			  	<choose>
+			  		<when test="cri.type == 'O'.toString()">
+			  			ODR_CODE like '%' || #{cri.keyword} || '%'
+			  		</when>
+			  		<when test="cri.type == 'M'.toString()">
+			  			MEM_ID like '%' || #{cri.keyword} || '%'
+			  		</when>
+			  	</choose>
+			  </trim>
+			</foreach>
+		</trim>
+	
+	</sql>
+	
+	<sql id="odrstatus">
+	
+		<if test="odr_status != null and !odr_status.equals('')">
+			ODR_STATUS = #{odr_status} AND
+		</if>
+	
+	</sql>
+	
+	<sql id="period">
+	
+		<if test="startDate != null and !startDate.equals('') and endDate != null and !endDate.equals('')">
+		
+			<![CDATA[
+			
+			ODR_DATE >= TO_DATE(#{startDate}) AND ODR_DATE < TO_DATE(#{endDate}) + 1 AND
+			
+			]]>
+			
+		
+		</if>
+		
+	</sql>
+	
+	<select id="getOrderList" resultType="com.demo.domain.OrderVO">
+	
+		<![CDATA[
+		SELECT 
+			RN, ODR_CODE, ODR_DATE, MEM_ID, ODR_NAME, ODR_TOTAL_PRICE, ODR_STATUS  
+		FROM (
+	        SELECT 
+	        	/*+ INDEX_DESC(ord PK_ORDER_CODE) */  
+                ROWNUM RN, ORD.ODR_CODE, ORD.ODR_DATE, ORD.MEM_ID, ORD.ODR_NAME, ORD.ODR_TOTAL_PRICE, ORD.ODR_STATUS
+	        FROM 
+	        	ORDER_TBL ord
+            WHERE  
+	    ]]>   	
+	       	<include refid="odrstatus" />
+	       	<include refid="period" />
+	       	<include refid="criteria" />  
+	    <![CDATA[    	
+	       	ROWNUM <= #{cri.pageNum} * #{cri.amount}
+ 			)
+		WHERE RN > (#{cri.pageNum}-1) * #{cri.amount}
+		]]>
+	
+	</select>
+	
+	<select id="getOrderTotalCount" resultType="int">
+	
+		SELECT COUNT(*) FROM ORDER_TBL WHERE
+		
+		<include refid="odrstatus" />
+		<include refid="period" />
+		<include refid="criteria" />
+		
+		ODR_CODE > 0
+	
+	</select>
+	
+	<update id="orderStatusChange">
+	
+		UPDATE 
+			ORDER_TBL
+		SET
+			ODR_STATUS = #{odr_status}
+		WHERE
+			ODR_CODE = #{odr_code}
+	
+	</update>
+	
+	<!-- 진행상태 카운트 -->
+	<select id="orderStatusCount" resultType="int">
+	
+		SELECT 
+			COUNT(*)
+		FROM 
+			ORDER_TBL
+		WHERE
+			ODR_STATUS = #{odr_status}
+		
+	</select>
+	
+	<!-- 주문 상세정보1 -->
+	<select id="getOrderDetailList1" resultType="com.demo.domain.OrderDetailVOList">
+	
+		SELECT 
+			OD.ODR_CODE, OD.PDT_NUM,  P.PDT_NAME, P.PDT_PRICE, OD.ODR_AMOUNT, OD.ODR_PRICE, P.PDT_IMG_FOLDER, P.PDT_IMG 
+		FROM 
+			ORDER_DETAIL_TBL OD INNER JOIN PRODUCT_TBL P
+		ON 
+			OD.PDT_NUM = P.PDT_NUM
+		WHERE 
+			ODR_CODE = #{odr_code}
+		
+
+	</select>
+	
+	
+	<select id="getPayment" resultType="com.demo.domain.PaymentVO">
+	
+		SELECT
+			PAY_CODE, ODR_CODE, MEM_ID, PAY_METHOD, PAY_DATE, PAY_TOT_PRICE, PAY_NOBANK_PRICE, PAY_REST_PRICE, PAY_NOBANK_USER, PAY_NOBANK, PAY_MEMO
+		FROM
+			PAYMENT_TBL
+		WHERE
+			ODR_CODE = #{odr_code}
+	
+	</select>
+	
+	<select id="getOrder" resultType="com.demo.domain.OrderVO">
+	
+		SELECT
+			ODR_CODE, MEM_ID, ODR_NAME, ODR_ZIPCODE, ODR_ADDR, ODR_ADDR_D, ODR_PHONE, ODR_TOTAL_PRICE, ODR_DATE, ODR_STATUS, PAYMENT_STATUS
+		FROM
+			ORDER_TBL
+		WHERE
+			ODR_CODE = #{odr_code}
+	</select>
+	
+	<update id="pay_memo">
+		
+		UPDATE
+			PAYMENT_TBL
+		SET
+			PAY_MEMO = #{pay_memo}
+		WHERE
+			PAY_CODE = #{pay_code}
+	</update>
+	
+	<!--  주문 개별삭제 -->
+	<delete id="orderDetailProductDelete">
+	
+		DELETE FROM
+			ORDER_DETAIL_TBL
+		WHERE 
+			ODR_CODE = #{odr_code}
+		AND
+			PDT_NUM = #{pdt_num}
+		
+	</delete>
+	
+	<update id="orderTotalPriceChange">
+	
+		UPDATE
+			ORDER_TBL
+		SET
+			ODR_TOTAL_PRICE = ODR_TOTAL_PRICE - #{odr_price}
+		WHERE
+			ODR_CODE = #{odr_code}
+	
+	</update>
+	
+	
+	<resultMap type="com.demo.domain.OrderDetailVO" id="orderDetailMap">
+		<id property="odr_code" column="odr_code"/>
+		<id property="pdt_num" column="pdt_num"/>
+		<result property="odr_amount" column="odr_amount"/>
+		<result property="odr_price" column="odr_price"/>
+	</resultMap>
+	
+	<resultMap type="com.demo.domain.ProductVO" id="productMap">
+		<id property="pdt_num" column="pdt_num"/>
+		<result property="cate_code" column="cate_code"/>
+		<result property="cate_code_prt" column="cate_code_prt"/>
+		<result property="pdt_name" column="pdt_name"/>
+		<result property="pdt_price" column="pdt_price"/>
+		<result property="pdt_discount" column="pdt_discount"/>
+		<result property="pdt_company" column="pdt_company"/>
+		<result property="pdt_detail" column="pdt_detail"/>
+		<result property="pdt_img_folder" column="pdt_img_folder"/>
+		<result property="pdt_img" column="pdt_img"/>
+		<result property="pdt_amount" column="pdt_amount"/>
+		<result property="pdt_buy" column="pdt_buy"/>
+		<result property="pdt_date_sub" column="pdt_date_sub"/>
+		<result property="pdt_date_up" column="pdt_date_up"/>
+	</resultMap>
+	
+	<resultMap type="com.demo.domain.OrderDetailProductVO" id="orderDetailProductMap">
+		<collection property="orderDetailVO" resultMap="orderDetailMap" />
+		<collection property="productVO" resultMap="productMap" />
+	</resultMap>
+	
+	<!-- resultMap 을 사용목적으로 주석처리. 주문 상세정보2 -->
+	<select id="getOrderDetailList2" resultMap="orderDetailProductMap">
+	
+		SELECT 
+			OD.ODR_CODE, OD.PDT_NUM,  P.PDT_NAME, P.PDT_PRICE, OD.ODR_AMOUNT, OD.ODR_PRICE, P.PDT_IMG_FOLDER, P.PDT_IMG 
+		FROM 
+			ORDER_DETAIL_TBL OD INNER JOIN PRODUCT_TBL P
+		ON 
+			OD.PDT_NUM = P.PDT_NUM
+		WHERE 
+			ODR_CODE = #{odr_code}
+		
+
+	</select>
+	
+	<!-- 주문삭제. -->
+	<delete id="orderDelete">
+	
+		DELETE FROM
+			ORDER_TBL
+		WHERE
+			ODR_CODE = #{odr_code}
+	
+	</delete>
+	
+	
+	<delete id="orderDetailDelete">
+	
+		DELETE FROM
+			ORDER_DETAIL_TBL
+		WHERE
+			ODR_CODE = #{odr_code}	
+	
+	</delete>
+	
+	
+	
+	<delete id="paymentDelete">
+	
+		DELETE FROM
+			PAYMENT_TBL
+		WHERE
+			ODR_CODE = #{odr_code}	
+	
+	</delete>
+	
+	 	
+</mapper>

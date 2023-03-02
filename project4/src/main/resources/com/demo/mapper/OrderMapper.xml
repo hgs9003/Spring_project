@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.demo.mapper.OrderMapper">
+
+
+	<select id="getOrderSequence" resultType="long">
+	
+		SELECT SEQ_ODR_CODE.NEXTVAL FROM DUAL
+	
+	</select>
+	
+
+	<insert id="orderSave" parameterType="com.demo.domain.OrderVO">
+		<!-- 
+		<selectKey keyProperty="odr_code" order="BEFORE" resultType="long">
+			SELECT SEQ_ORD_CODE.NEXTVAL FROM DUAL
+		</selectKey>
+		 -->
+		INSERT INTO ORDER_TBL
+			(ODR_CODE, MEM_ID, ODR_NAME, ODR_ZIPCODE, ODR_ADDR, ODR_ADDR_D, ODR_PHONE, ODR_TOTAL_PRICE)
+		VALUES
+			(#{odr_code}, #{mem_id}, #{odr_name}, #{odr_zipcode}, #{odr_addr}, #{odr_addr_d}, #{odr_phone}, #{odr_total_price})
+	
+	</insert>
+	
+	<!-- 장바구니에서 주문상세작성 -->
+	<insert id="orderDetailSave">
+	
+		INSERT INTO ORDER_DETAIL_TBL
+			(ODR_CODE, PDT_NUM, ODR_AMOUNT, ODR_PRICE)
+		SELECT  
+			#{odr_code}, C.PDT_NUM,  C.CART_AMOUNT, P.PDT_PRICE * C.CART_AMOUNT
+		FROM 
+			CART_TBL C INNER JOIN PRODUCT_TBL P	
+		ON 
+			C.PDT_NUM = P.PDT_NUM 
+		WHERE 
+			C.MEM_ID = #{mem_id}
+	
+
+	</insert>
+	
+	<!-- 바로구매에서 주문상세작성 -->
+	<insert id="orderDirectDetailSave">
+	
+		INSERT INTO ORDER_DETAIL_TBL
+			(ODR_CODE, PDT_NUM, ODR_AMOUNT, ODR_PRICE)
+		VALUES
+			(#{odr_code}, #{pdt_num}, #{odr_amount}, #{odr_price})
+	
+	</insert>
+	
+	<!-- SEQ_PAYMENT_CODE.NEXTVAL -->
+	<insert id="paymentSave">
+	
+		INSERT INTO PAYMENT_TBL
+			(PAY_CODE, ODR_CODE, MEM_ID, PAY_METHOD, PAY_TOT_PRICE, PAY_NOBANK_PRICE, PAY_NOBANK_USER, PAY_NOBANK)
+		VALUES
+			(SEQ_PAYMENT_CODE.NEXTVAL, #{odr_code}, #{mem_id}, #{pay_method}, #{pay_tot_price}, #{pay_nobank_price}, #{pay_nobank_user}, #{pay_nobank})
+	
+	</insert>
+	
+	<select id="directOrder" resultType="com.demo.domain.CartVOList">
+	
+		SELECT 
+			PDT_IMG_FOLDER, 
+			PDT_IMG, 
+			PDT_PRICE, 
+			#{cart_amount} as CART_AMOUNT, 
+			PDT_PRICE * #{cart_amount} AS SALES_PRICE, 
+			#{mem_id} as MEM_ID, 
+			PDT_NUM, 
+			pdt_name 
+		
+		FROM 
+			PRODUCT_TBL
+		WHERE 
+			PDT_NUM = #{pdt_num}
+	
+	</select>
+	
+	<select id="getOrderProcessCount" resultType="int">
+	
+		<![CDATA[
+	
+		SELECT 
+			COUNT(*)
+		FROM 
+			ORDER_TBL
+		WHERE 
+			MEM_ID = #{mem_id}
+		AND 
+			ODR_STATUS <> '배송완료'
+	
+		]]>
+	</select>
+
+	<select id="getOrderList" resultType="com.demo.domain.OrderVO">
+	
+		<![CDATA[
+		SELECT 
+			RN, ODR_CODE, ODR_DATE, MEM_ID, ODR_NAME, ODR_TOTAL_PRICE, ODR_STATUS  
+		FROM (
+	        SELECT 
+	        	/*+ INDEX_DESC(ord PK_ORDER_CODE) */  
+                ROWNUM RN, ORD.ODR_CODE, ORD.ODR_DATE, ORD.MEM_ID, ORD.ODR_NAME, ORD.ODR_TOTAL_PRICE, ORD.ODR_STATUS
+	        FROM 
+	        	ORDER_TBL ord
+            WHERE  
+             	ORD.MEM_ID = #{mem_id}
+            AND
+            	ROWNUM <= #{cri.pageNum} * #{cri.amount}
+ 			)
+		WHERE RN > (#{cri.pageNum}-1) * #{cri.amount}
+		]]>
+	
+	</select>
+	
+	<select id="getOrderTotalCount" resultType="int">
+	
+		SELECT 
+			COUNT(*) 
+		FROM 
+			ORDER_TBL 
+		WHERE
+			MEM_ID = #{mem_id}
+	
+	</select>
+	
+	<resultMap type="com.demo.domain.OrderDetailVO" id="orderDetailMap">
+		<id property="odr_code" column="odr_code"/>
+		<id property="pdt_num" column="pdt_num"/>
+		<result property="odr_amount" column="odr_amount"/>
+		<result property="odr_price" column="odr_price"/>
+	</resultMap>
+	
+	<resultMap type="com.demo.domain.ProductVO" id="productMap">
+		<id property="pdt_num" column="pdt_num"/>
+		<result property="cate_code" column="cate_code"/>
+		<result property="cate_code_prt" column="cate_code_prt"/>
+		<result property="pdt_name" column="pdt_name"/>
+		<result property="pdt_price" column="pdt_price"/>
+		<result property="pdt_discount" column="pdt_discount"/>
+		<result property="pdt_company" column="pdt_company"/>
+		<result property="pdt_detail" column="pdt_detail"/>
+		<result property="pdt_img_folder" column="pdt_img_folder"/>
+		<result property="pdt_img" column="pdt_img"/>
+		<result property="pdt_amount" column="pdt_amount"/>
+		<result property="pdt_buy" column="pdt_buy"/>
+		<result property="pdt_date_sub" column="pdt_date_sub"/>
+		<result property="pdt_date_up" column="pdt_date_up"/>
+	</resultMap>
+	
+	<resultMap type="com.demo.domain.OrderDetailProductVO" id="orderDetailProductMap">
+		<collection property="orderDetailVO" resultMap="orderDetailMap" />
+		<collection property="productVO" resultMap="productMap" />
+	</resultMap>
+	
+	<!-- resultMap 을 사용목적으로 주석처리. 주문 상세정보2 -->
+	<select id="getOrderDetailList" resultMap="orderDetailProductMap">
+	
+		SELECT 
+			OD.ODR_CODE, OD.PDT_NUM,  P.PDT_NAME, P.PDT_PRICE, OD.ODR_AMOUNT, OD.ODR_PRICE, P.PDT_IMG_FOLDER, P.PDT_IMG 
+		FROM 
+			ORDER_DETAIL_TBL OD INNER JOIN PRODUCT_TBL P
+		ON 
+			OD.PDT_NUM = P.PDT_NUM
+		WHERE 
+			ODR_CODE = #{odr_code}
+		
+
+	</select>
+	
+
+
+</mapper>

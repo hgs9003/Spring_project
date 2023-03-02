@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.demo.mapper.AdProductMapper">
+
+	<select id="getCategoryList" resultType = "com.demo.domain.CategoryVO">
+	
+		SELECT
+			CATE_CODE,
+			CATE_CODE_PRT,
+			CATE_NAME
+		FROM
+			CATEGORY_TBL
+		WHERE
+			CATE_CODE_PRT IS NULL
+		
+	
+	
+	</select>
+
+	<select id="getSubCategoryList" resultType = "com.demo.domain.CategoryVO">
+	
+		SELECT
+			CATE_CODE,
+			CATE_CODE_PRT,
+			CATE_NAME
+		FROM
+			CATEGORY_TBL
+		WHERE
+			CATE_CODE_PRT = #{cate_code}
+	
+	</select>
+	
+		<insert id="productInsert">
+	
+		INSERT INTO PRODUCT_TBL
+			(PDT_NUM, CATE_CODE, CATE_CODE_PRT, PDT_NAME, PDT_PRICE, PDT_DISCOUNT, PDT_COMPANY, PDT_DETAIL, PDT_IMG_FOLDER, PDT_IMG, PDT_AMOUNT, PDT_BUY)
+		VALUES(SEQ_PRODUCT_NUM.NEXTVAL, #{cate_code},#{cate_code_prt},#{pdt_name},#{pdt_price},#{pdt_discount},#{pdt_company},#{pdt_detail},#{pdt_img_folder},#{pdt_img},#{pdt_amount},#{pdt_buy})
+			
+	
+	</insert>
+	
+		<sql id="criteria">
+	
+		<trim prefix="(" suffix=") AND " prefixOverrides="OR">
+			<foreach collection="typeArr" item="type">
+			  <trim prefix="OR">
+			  	<choose>
+			  		<when test="type == 'N'.toString()">
+			  			PDT_NAME like '%' || #{keyword} || '%'
+			  		</when>
+			  		<when test="type == 'C'.toString()">
+			  			PDT_COMPANY like '%' || #{keyword} || '%'
+			  		</when>
+			  	</choose>
+			  </trim>
+			</foreach>
+		</trim>
+	
+	</sql>
+	
+		<select id="getProductList" resultType="com.demo.domain.ProductVO">
+		<![CDATA[  
+		select pdt_num, CATE_CODE, CATE_CODE_PRT, PDT_NAME, PDT_PRICE, PDT_DISCOUNT, PDT_COMPANY, 
+                PDT_DETAIL, PDT_IMG_FOLDER, PDT_IMG, PDT_AMOUNT, PDT_BUY, PDT_DATE_SUB, PDT_DATE_UP
+		from (
+	        SELECT /*+ INDEX_DESC(PRODUCT_TBL PK_PRODUCT_NUM) */  
+                ROWNUM RN, pdt_num, CATE_CODE, CATE_CODE_PRT, PDT_NAME, PDT_PRICE, PDT_DISCOUNT, PDT_COMPANY, 
+                PDT_DETAIL, PDT_IMG_FOLDER, PDT_IMG, PDT_AMOUNT, PDT_BUY, PDT_DATE_SUB, PDT_DATE_UP
+	        FROM PRODUCT_TBL
+	       	WHERE 
+	    ]]>   	
+	       	<include refid="criteria" />  
+	    <![CDATA[    	
+	       	ROWNUM <= #{pageNum} * #{amount}
+ 			)
+		WHERE RN > (#{pageNum}-1) * #{amount}
+		]]>
+	
+	</select>
+	
+		<select id="getProductTotalCount" resultType="int">
+	
+		SELECT 
+			COUNT(*)
+		FROM 
+			PRODUCT_TBL
+		WHERE 
+		
+		<include refid="criteria" />
+		
+		PDT_NUM > 0	
+		
+	</select>
+	
+	<select id="getProductByNum" resultType="com.demo.domain.ProductVO">
+	
+		SELECT 
+			pdt_num, CATE_CODE, CATE_CODE_PRT, PDT_NAME, PDT_PRICE, PDT_DISCOUNT, PDT_COMPANY, 
+                PDT_DETAIL, PDT_IMG_FOLDER, PDT_IMG, PDT_AMOUNT, PDT_BUY, PDT_DATE_SUB, PDT_DATE_UP
+	    FROM 
+	    	PRODUCT_TBL
+	    WHERE 
+			pdt_num = #{pdt_num}
+	
+	
+	</select>
+
+	<update id="productModify">
+	
+			UPDATE 
+			PRODUCT_TBL
+		SET
+			CATE_CODE = #{cate_code}, CATE_CODE_PRT = #{cate_code_prt}, PDT_NAME = #{pdt_name}, PDT_PRICE = #{pdt_price}, PDT_DISCOUNT = #{pdt_discount},
+			PDT_COMPANY = #{pdt_company}, PDT_DETAIL = #{pdt_detail}, PDT_IMG_FOLDER = #{pdt_img_folder}, PDT_IMG = #{pdt_img}, PDT_AMOUNT = #{pdt_amount},
+			PDT_BUY = #{pdt_buy}, PDT_DATE_UP = SYSDATE
+		
+		WHERE
+			pdt_num = #{pdt_num}
+
+	</update>
+	
+	
+	<delete id="productDelete">
+	
+		DELETE FROM
+			PRODUCT_TBL
+		WHERE
+			pdt_num = #{pdt_num}
+	
+	
+	</delete>
+	
+		<update id="btnSalesYN">
+	
+		UPDATE
+			PRODUCT_TBL
+		SET
+			PDT_BUY = #{pdt_buy}
+		WHERE 
+			pdt_num = #{pdt_num}
+	
+	</update>
+
+
+
+</mapper>

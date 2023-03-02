@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:mybatis-spring="http://mybatis.org/schema/mybatis-spring"
+	xsi:schemaLocation="http://mybatis.org/schema/mybatis-spring http://mybatis.org/schema/mybatis-spring-1.2.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.3.xsd">
+	
+	<!-- Root Context: defines shared resources visible to all other web components -->
+	
+	
+	<!-- 데이타베이스 연동에 필요한 bean설정 -->
+	
+	<!-- 1) HicariCP 라이브러리: Connection Pool기능목적 -->
+	<bean id="hikariConfig" class="com.zaxxer.hikari.HikariConfig">
+		<!--  Setter메소드 -->
+		<!-- 리눅스 서버 실제반영  -->
+		<!-- 
+		<property name="driverClassName" value="oracle.jdbc.OracleDriver" />
+		<property name="jdbcUrl" value="jdbc:oracle:thin:@localhost:1521:xe" />
+		 -->
+		
+		<!-- 개발시 SQL로그출력을 참조하기 위하여  -->
+		<property name="driverClassName" value="net.sf.log4jdbc.sql.jdbcapi.DriverSpy" />
+		<property name="jdbcUrl" value="jdbc:log4jdbc:oracle:thin:@localhost:1521:xe" />
+		
+		
+		<property name="username" value="docmall" />
+		<property name="password" value="docmall" />
+	</bean>
+	
+	<bean id="dataSource" class="com.zaxxer.hikari.HikariDataSource" destroy-method="close">
+		<!-- 생성자메소드 -->
+		<constructor-arg ref="hikariConfig" />
+	</bean>
+	
+	<!-- 2)mybatis에서 제공하는 클래스를 bean설정 -->
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+	    <property name="dataSource" ref="dataSource" />
+	</bean>
+	
+	<!-- 트랜잭션 설정구문 -->
+	<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource"></property>
+	</bean>
+	
+	<tx:annotation-driven/>	
+	 
+	<!--  mybatis에서 사용할 xml mapper 파일의 위치를 설정 -->
+	<!-- src/main/resources폴더에 com/demo/mapper 폴더생성하고, com.demo.mapper패키지 생성. 그 위치를 아래구문으로 설정. -->
+	<mybatis-spring:scan base-package="com.demo.mapper"/>
+	
+	<context:component-scan base-package="com.demo.service" />
+	
+	
+	
+		
+</beans>
+
+
+
+
